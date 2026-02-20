@@ -192,8 +192,6 @@ This design is based on the original 2020 Lucid HDL work by **Ragul Balaji** (SU
 
 If you plan to redistribute or reuse substantial parts of Ragul Balaji’s original implementation, follow any licensing or permission requirements included with the source you received.
 
----
-
 ## What This Module Does
 
 The renderer generates:
@@ -208,8 +206,6 @@ The renderer generates:
 - Cell size: **32×32 pixels**
 - Grid: **20×15 cells** (300 total)
 - Glyph size: **8×8 pixels**, scaled by 4× to fill each 32×32 cell
-
----
 
 ## VGA Timing Overview
 
@@ -232,8 +228,6 @@ The design counts through the full timing envelope, not just visible pixels.
   Total: **525 lines per frame**
 
 A ~25 MHz pixel tick is derived from the 100 MHz FPGA clock using a divider and edge detector.
-
----
 
 ## Key Signals
 
@@ -264,8 +258,6 @@ The address is computed from the current pixel counters:
 - `299` = row 14 col 19 (bottom-right)
 
 > During blanking (porches and sync), counters still run. If your memory only defines 0..299, return a default or blank value for out-of-range addresses.
-
----
 
 ### `vga_mem_data[16]` (input)
 
@@ -300,8 +292,6 @@ The font ROM outputs a 1-bit `color` indicating whether the glyph pixel is on:
 - If `font_rom.color == 1`, output **foreground** (`[13:11]`)
 - Else, output **background** (`[10:8]`)
 
----
-
 ## Font ROM (`vga_font_rom`)
 
 `vga_font_rom` is a combinational glyph ROM:
@@ -332,8 +322,6 @@ The original implementation notes the following chosen output pins:
 
 If your board routes these pins to a VGA or VGA-compatible resistor network, this mapping drives the display directly. If you are using a different board or connector, update the top-level pin mapping and constraints accordingly.
 
----
-
 ## RGB Bit Ordering Note
 
 Some boards or adapter wiring route the color lines in BGR order instead of RGB. The module includes a bit swap:
@@ -343,8 +331,6 @@ Some boards or adapter wiring route the color lines in BGR order instead of RGB.
 - `vga_rgb[2] = sig_RGB[0]`
 
 Adjust this mapping if your board’s wiring differs.
-
----
 
 ## 3-bit RGB (Not 3 Bits Per Channel)
 
