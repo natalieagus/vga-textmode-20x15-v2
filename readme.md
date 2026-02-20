@@ -8,7 +8,7 @@ This project is written in [Lucid V2 HDL](https://alchitry.com/tutorials/lucid-r
 
 This design is based on the original 2020 Lucid HDL work by **Ragul Balaji** (SUTD 50.002 Computation Structures).
 
-- **Original author:** Ragul Balaji (2020)
+- **Original author:** [Ragul Balaji (2020)](https://github.com/ragulbalaji)
 - **Module concept:** FPGA VGA 20×15 Text Mode
 - **Timing reference:** http://tinyvga.com/vga-timing/640x480@60Hz
 
@@ -371,3 +371,70 @@ Packed value:
 
 - The visible-area bounds have been fixed in your version, so the renderer now uses the full **640×480** visible region.
 - This module expects `vga_mem_data` to be available combinationally for the current `vga_mem_address`. If you use synchronous BRAM with 1-cycle read latency, you will need to pipeline the pixel path.
+
+## VGA Connector / Analog Output Options
+
+### Using a VGA accessory board (recommended)
+
+Because **VGA color lines are analog**, you usually need a small interface board (or resistor network) between FPGA GPIO pins and the VGA connector.
+
+A simple option is the [**Waveshare VGA PS2 Board**](https://www.waveshare.com/vga-ps2-board.htm?srsltid=AfmBOoq8GHwhH7JTcpRX_Uvm_637oqH1-3YG2PHg4xTsOarKga4tgR54) or equivalent, which is an accessory board for testing **VGA and PS/2 interfaces**. It integrates a VGA connector, PS/2 connector, and control interface on one module, and Waveshare also lists demo resources / wiki material for it.
+
+This type of board is convenient because it typically already includes the connector and the analog interface components, so you can wire:
+
+- `R`, `G`, `B` (digital bits from FPGA)
+- `HSYNC`
+- `VSYNC`
+- `GND`
+
+and test quickly.
+
+### Why this is needed
+
+VGA expects:
+
+- **HSYNC / VSYNC** as digital timing signals
+- **R / G / B** as **analog voltage levels**
+
+The `vga_text_mode` module outputs **3 digital color bits total** (`vga_rgb[2:0]`), which is fine for an 8-color design, but those bits still need to be converted into VGA-compatible analog levels.
+
+## Other Hardware Options
+
+### Resistor DAC
+
+The simplest approach is a **resistor ladder / weighted resistor network** from FPGA pins to VGA `R`, `G`, `B`.
+
+- For this project (1 bit per color), you can use **one FPGA pin per color channel** plus a resistor per channel.
+- If you later want more color depth (for example 3 bits per channel), use multiple pins per channel and a weighted resistor network.
+
+This is the standard low-cost approach for FPGA VGA labs. There are many tutorials online you can search on your own. Example [here](https://www.fpga4fun.com/VGA.html) and [here](https://embeddedthoughts.com/2016/07/29/driving-a-vga-monitor-using-an-fpga/).
+
+### VGA PMOD / expansion module
+
+Another common option is a **VGA PMOD or FPGA VGA expansion board** like [this](https://digilent.com/reference/pmod/pmodvga/start?srsltid=AfmBOopM7yrOJJPah_IoQnoCEEM8YFpEjZxkpl_j8dVFs9qUVvfVEdJK) one that already contains:
+
+- VGA connector
+- resistor network (or simple DAC interface)
+- pin header matching your FPGA board
+
+This is similar in spirit to the Waveshare board, just in a different form factor.
+
+### Dedicated video DAC (more advanced)
+
+If you want cleaner analog levels or higher color depth, you can use a **video DAC** (or an external DAC solution), then drive the DAC from a wider RGB bus.
+
+This is usually overkill for a 20×15 text mode demo, but useful for:
+
+- higher color depth
+- cleaner analog output
+- larger graphics projects
+
+## Note for this Project
+
+This text-mode renderer only needs:
+
+- `HSYNC`
+- `VSYNC`
+- `R`, `G`, `B` (1 bit each)
+
+So a **simple VGA interface board** (like the Waveshare VGA/PS2 accessory board) or a **basic resistor DAC network** is enough for the current design.
