@@ -1,0 +1,182 @@
+/*
+   V S RAGUL BALAJI 2020 (C) ALL RIGHTS RESERVED
+   MUST SEEK PERMISSION BEFORE USING MY WORK
+   FPGA 16 BIT VGA 20x15 TEXT MODE - LUCID HDL
+   SUTD 50.002 Computation Structures
+   
+   Timing Spec: http://tinyvga.com/vga-timing/640x480@60Hz
+   led[0] / D49 => RED
+   led[1] / D48 => GREEN
+   led[2] / D2  => BLUE
+   led[3] / D3  => HSYNC
+   led[4] / D46 => VSYNC
+   
+   For 640×480@60Hz VGA, the standard pixel clock is about 25.175 MHz
+   
+   VGA scans left-to-right within a line, then top-to-bottom across lines, repeating ~60 times per second
+    1. Start of a frame (after VSYNC): beam goes to the top-left.
+    2. Draw a scanline: pixels go left-to-right (one pixel per pixel clock).
+    3. HSYNC: end-of-line pulse, then the monitor moves to the next line.
+    4. Repeat lines top-to-bottom.
+    5. VSYNC: end-of-frame pulse, then it returns to top for the next frame.
+    
+    HSYNC: the horizontal sync pulse that tells the monitor “start new line”
+       * marks the end of one scanline and the start of the next line
+    VSYNC: the signal that tells the display “start a new frame”.
+       * marks the end of the last scanline of a frame and the start of the next frame (back to the top).
+   
+   On each scanline, the order for horizontal scan is:
+       1. Visible pixels: x = 0..639 (640 clocks)
+       2. Front porch: x = 640..655 (16 clocks). RGB should be blank here.
+       3. HSYNC pulse: x = 656..751 (96 clocks)
+       4. Back porch: x = 752..799 (48 clocks)
+       
+   Then vertically:
+       1. Visible lines: 0..479 (480 clocks)
+       2. Vertical front porch: 480..489 (10 clocks)
+       3. VSYNC pulse: 490..491 (2 clocks) 
+       4. Vertical back porch: 492..524 (33 clocks)
+       
+   This module divides the 640 x 480 visible area into 20x15 big boxes:
+       * each box (character cell) is 32x32 pixels
+       * 640 / 32 = 20 columns
+       * 480 / 32 = 15 rows
+       * inside each 32×32 box, the glyph is an 8×8 font (see vga_font_rom), 
+       * this module scaled it up by 4 per dim 
+       
+   Coordinate mapping
+        * The visible 640×480 area is divided into 20 columns × 15 rows of cells, each cell 32×32 pixels.
+        * tile_x = hzcnt >> 5 (0..19)
+        * tile_y = vtcnt >> 5 (0..14)
+        * Address formula: vga_mem_address = tile_x + (tile_y * 20) 
+        * Valid visible addresses: 0..299 (9 bits long)
+       
+   Every pixel clock:
+        1. figures out which text cell (out of 20×15 = 300 cells) the current pixel is inside,
+        2. uses that cell index as a memory address (vga_mem_address),
+        3. expects the memory to return a 16-bit word (vga_mem_data) containing: 
+            * which ASCII character to draw
+            * foreground and background colors
+        4. uses the font ROM to decide if this pixel is “ink” or “background”
+        5. outputs RGB + sync.
+        the memory stores the screen contents.
+                
+
+*/
+
+module vga_text_mode (
+    input clk,  // clock
+    input rst,  // reset
+    
+    // Holds the character and colors for the selected text cell (vga_mem_address).
+    // 16 bit data
+    // [15:14]= UNUSED, [13:11]=FG COLOR FIELD, [10:8]=BG COLOR FIELD, [7:0]=ASCII
+    // Each color field is RGB = {R,G,B}, 1 bit per channel
+    input vga_mem_data[16], 
+    output vga_mem_address[9],
+   
+    output vga_rgb[3],
+    output vga_hsync,
+    output vga_vsync
+) {
+    
+    sig sig_RGB[3]
+    sig sig_HSYNC
+    sig sig_VSYNC // create my signals
+    
+    vga_font_rom font_rom
+    
+    .clk(clk) {
+        edge_detector edges (#RISE(1), #FALL(0))
+        
+        .rst(rst) {
+            // state elements
+            counter slowcnt (#SIZE(1), #DIV(1)) // divide actual clock by 4
+            
+            // horizxontal pixel pos counter (horizontal timing)
+            // visible: 640, front porch: 16, HSYNC: 96, back porch: 48
+            dff hzcnt[12](#INIT(0)) // 25Mhz for VGA 640 + 16 + 96 + 48 = 800 cols
+            
+            // vertical line counter (vertical timing)
+            // visible: 480, front porch: 10, VSYNC: 2, back porch: 33
+            dff vtcnt[12](#INIT(0)) // 25Mhz for VGA 480 + 10 +  2 + 33 = 525 rows
+        }
+    }
+    
+    always {
+        // convert level 25Mhz signal into step
+        edges.in = slowcnt.value // 100Mhz -> 25Mhz signal
+        
+        // compute which text cell are we in
+        // hzcnt.q is the current pixel x position within the full 800-cycle line (front porch, visible, HSYNC, back porch)
+        // hzcnt.q >> 5 divides by 32 --> tile_x (0..19 in visible region)
+        // vtcnt.q >> 5 divides by 32 --> tile_y (0..14 in visible region)
+        // address = tile_x + 20*tile_y ⇒ 0..299
+        vga_mem_address = (hzcnt.q >> 5) + ((vtcnt.q >> 5) * 20)
+        
+        // get ascii code for this cell vga_mem_address
+        font_rom.asciicode = vga_mem_data[7:0]
+        
+        // the rom contains 64 bit data for a 32x32 box, which means that info is condensed into 8x8 glyph
+        // for the current screen pixel, the ROM can answer whether the pixel is on/off
+        
+        font_rom.row = (vtcnt.q >> 2) & 3b111 // forces the value to be from 0...7 
+        font_rom.col = (hzcnt.q >> 2) & 3b111 // forces the value to be from 0...7 
+        
+        // update horizontal and vertical counter only on pixel tick
+        if (edges.out == 1) { // 25Mhz signal
+            if (hzcnt.q > 798) { // End of Line
+                // sets to 0 when hzcnt.q == 799
+                // .q: 0 will take effect at +1 cycle later
+                hzcnt.d = 0
+                if (vtcnt.q > 523) { // End of Screen 
+                    // sets to 0 when hzcnt.q == 524
+                    vtcnt.d = 0
+                }else{ 
+                    vtcnt.d = vtcnt.q + 1
+                }
+            }else{
+                hzcnt.d = hzcnt.q + 1
+                vtcnt.d = vtcnt.q
+            }
+        }else{
+            hzcnt.d = hzcnt.q
+            vtcnt.d = vtcnt.q
+        }
+        
+        if (hzcnt.q > 655 && hzcnt.q < 751) { // HSYNC Logic
+            // HSYNC pulse window
+            // HSYNC is high for hzcnt 656..750
+            sig_HSYNC = 1
+        }else{
+            sig_HSYNC = 0
+        }
+        
+        if (vtcnt.q > 489 && vtcnt.q < 492) { // VSYNC Logic
+            // VSYNC pulse window
+            // VSYNC is high for vtcnt 490..491.
+            sig_VSYNC = 1
+        }else{
+            sig_VSYNC = 0
+        }
+        
+        // output RGB only in visible area
+        if (hzcnt.q < 640 && vtcnt.q < 480) { // Visible Area
+            // if font_rom says "pixel is on", color it
+            if(font_rom.color){
+                sig_RGB = vga_mem_data[13:11] // Foreground Color
+            }else{
+                sig_RGB = vga_mem_data[10:8]  // Background Color
+            }
+        }else{
+            sig_RGB = 3b0 // Blanking Area
+        }
+        
+        // Hacky fix for BGR to RGB
+        vga_rgb[0] = sig_RGB[2]   // SEND OUT SIGNALS
+        vga_rgb[1] = sig_RGB[1]   // SEND OUT SIGNALS
+        vga_rgb[2] = sig_RGB[0]   // SEND OUT SIGNALS
+        vga_hsync  = sig_HSYNC    // SEND OUT SIGNALS
+        vga_vsync  = sig_VSYNC    // SEND OUT SIGNALS
+    }
+}

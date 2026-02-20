@@ -1,0 +1,24 @@
+/*
+    Each BG/FG color field is RGB = {R,G,B}, 1 bit per channel
+        000 = black
+        100 = red
+        010 = green
+        001 = blue
+        110 = yellow (red+green)
+        101 = magenta (red+blue)
+        011 = cyan (green+blue)
+        111 = white
+*/
+
+module vga_mem (
+    input addr[9],
+    output data[16]
+  ) {
+
+  always {
+    data[15:14] = 2b00;    // UNUSED
+    data[13:11] = 3b111;   // white FG color field
+    data[10:8]  = 3b000;   // black BG color field
+    data[7:0]   = 8h41;    // 'A' (see vga_font_rom)
+  }
+}

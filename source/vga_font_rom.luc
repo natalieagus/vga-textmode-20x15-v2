@@ -1,0 +1,126 @@
+/*
+   V S RAGUL BALAJI 2020 (C) ALL RIGHTS RESERVED
+   MUST SEEK PERMISSION BEFORE USING MY WORK
+   FPGA 16 BIT VGA 20x15 TEXT MODE FONT ROM - LUCID HDL
+   SUTD 50.002 Computation Structures
+   PUBLIC DOMAIN FONT https://github.com/dhepper/font8x8
+
+*/
+
+module vga_font_rom (
+    input asciicode[8],  // clock
+    input row[3],
+    input col[3],
+    output color
+  ) {
+
+sig font[64];  
+  
+  always {
+    
+case (asciicode) {
+  // 8x8 glyph for each character     
+  default: font = 64h0; // NOTHING
+  8h11: font = 64h87402010086492F1; // RB_NW_EMBLEM
+  8h12: font = 64h7011120408132447; // RB_NE_EMBLEM
+  8h13: font = 64h008102E448902141; // RB_SW_EMBLEM
+  8h14: font = 64h0040211308047251; // RB_SE_EMBLEM
+  8h15: font = 64h00081c3e7f7f3600; // MISC_HEART
+  8h21: font = 64h00180018183C3C18; // U+0021 (!)
+  8h22: font = 64h0000000000003636; // U+0022 (")
+  8h23: font = 64h0036367F367F3636; // U+0023 (#)
+  8h24: font = 64h000C1F301E033E0C; // U+0024 ($)
+  8h25: font = 64h0063660C18336300; // U+0025 (%)
+  8h26: font = 64h006E333B6E1C361C; // U+0026 (&)
+  8h27: font = 64h0000000000030606; // U+0027 (')
+  8h28: font = 64h00180C0606060C18; // U+0028 (()
+  8h29: font = 64h00060C1818180C06; // U+0029 ())
+  8h2A: font = 64h0000663CFF3C6600; // U+002A (*)
+  8h2B: font = 64h00000C0C3F0C0C00; // U+002B (+)
+  8h2C: font = 64h060C0C0000000000; // U+002C (,)
+  8h2D: font = 64h000000003F000000; // U+002D (-)
+  8h2E: font = 64h000C0C0000000000; // U+002E (.)
+  8h2F: font = 64h000103060C183060; // U+002F (/)
+  8h30: font = 64h003E676F7B73633E; // U+0030 (0)
+  8h31: font = 64h003F0C0C0C0C0E0C; // U+0031 (1)
+  8h32: font = 64h003F33061C30331E; // U+0032 (2)
+  8h33: font = 64h001E33301C30331E; // U+0033 (3)
+  8h34: font = 64h0078307F33363C38; // U+0034 (4)
+  8h35: font = 64h001E3330301F033F; // U+0035 (5)
+  8h36: font = 64h001E33331F03061C; // U+0036 (6)
+  8h37: font = 64h000C0C0C1830333F; // U+0037 (7)
+  8h38: font = 64h001E33331E33331E; // U+0038 (8)
+  8h39: font = 64h000E18303E33331E; // U+0039 (9)
+  8h3A: font = 64h000C0C00000C0C00; // U+003A (:)
+  8h3B: font = 64h060C0C00000C0C00; // U+003B (;)
+  8h3C: font = 64h00180C0603060C18; // U+003C (<)
+  8h3D: font = 64h00003F00003F0000; // U+003D (=)
+  8h3E: font = 64h00060C1830180C06; // U+003E (>)
+  8h3F: font = 64h000C000C1830331E; // U+003F (?)
+  8h40: font = 64h001E037B7B7B633E; // U+0040 (@)
+  8h41: font = 64h0033333F33331E0C; // U+0041 (A)
+  8h42: font = 64h003F66663E66663F; // U+0042 (B)
+  8h43: font = 64h003C66030303663C; // U+0043 (C)
+  8h44: font = 64h001F36666666361F; // U+0044 (D)
+  8h45: font = 64h007F46161E16467F; // U+0045 (E)
+  8h46: font = 64h000F06161E16467F; // U+0046 (F)
+  8h47: font = 64h007C66730303663C; // U+0047 (G)
+  8h48: font = 64h003333333F333333; // U+0048 (H)
+  8h49: font = 64h001E0C0C0C0C0C1E; // U+0049 (I)
+  8h4A: font = 64h001E333330303078; // U+004A (J)
+  8h4B: font = 64h006766361E366667; // U+004B (K)
+  8h4C: font = 64h007F66460606060F; // U+004C (L)
+  8h4D: font = 64h0063636B7F7F7763; // U+004D (M)
+  8h4E: font = 64h006363737B6F6763; // U+004E (N)
+  8h4F: font = 64h001C36636363361C; // U+004F (O)
+  8h50: font = 64h000F06063E66663F; // U+0050 (P)
+  8h51: font = 64h00381E3B3333331E; // U+0051 (Q)
+  8h52: font = 64h006766363E66663F; // U+0052 (R)
+  8h53: font = 64h001E33380E07331E; // U+0053 (S)
+  8h54: font = 64h001E0C0C0C0C2D3F; // U+0054 (T)
+  8h55: font = 64h003F333333333333; // U+0055 (U)
+  8h56: font = 64h000C1E3333333333; // U+0056 (V)
+  8h57: font = 64h0063777F6B636363; // U+0057 (W)
+  8h58: font = 64h0063361C1C366363; // U+0058 (X)
+  8h59: font = 64h001E0C0C1E333333; // U+0059 (Y)
+  8h5A: font = 64h007F664C1831637F; // U+005A (Z)
+  8h5B: font = 64h001E06060606061E; // U+005B ([)
+  8h5C: font = 64h00406030180C0603; // U+005C (\)
+  8h5D: font = 64h001E18181818181E; // U+005D (])
+  8h5E: font = 64h0000000063361C08; // U+005E (^)
+  8h5F: font = 64hFF00000000000000; // U+005F (_)
+  8h60: font = 64h0000000000180C0C; // U+0060 (`)
+  8h61: font = 64h006E333E301E0000; // U+0061 (a)
+  8h62: font = 64h003B66663E060607; // U+0062 (b)
+  8h63: font = 64h001E3303331E0000; // U+0063 (c)
+  8h64: font = 64h006E33333e303038; // U+0064 (d)
+  8h65: font = 64h001E033f331E0000; // U+0065 (e)
+  8h66: font = 64h000F06060f06361C; // U+0066 (f)
+  8h67: font = 64h1F303E33336E0000; // U+0067 (g)
+  8h68: font = 64h006766666E360607; // U+0068 (h)
+  8h69: font = 64h001E0C0C0C0E000C; // U+0069 (i)
+  8h6A: font = 64h1E33333030300030; // U+006A (j)
+  8h6B: font = 64h0067361E36660607; // U+006B (k)
+  8h6C: font = 64h001E0C0C0C0C0C0E; // U+006C (l)
+  8h6D: font = 64h00636B7F7F330000; // U+006D (m)
+  8h6E: font = 64h00333333331F0000; // U+006E (n)
+  8h6F: font = 64h001E3333331E0000; // U+006F (o)
+  8h70: font = 64h0F063E66663B0000; // U+0070 (p)
+  8h71: font = 64h78303E33336E0000; // U+0071 (q)
+  8h72: font = 64h000F06666E3B0000; // U+0072 (r)
+  8h73: font = 64h001F301E033E0000; // U+0073 (s)
+  8h74: font = 64h00182C0C0C3E0C08; // U+0074 (t)
+  8h75: font = 64h006E333333330000; // U+0075 (u)
+  8h76: font = 64h000C1E3333330000; // U+0076 (v)
+  8h77: font = 64h00367F7F6B630000; // U+0077 (w)
+  8h78: font = 64h0063361C36630000; // U+0078 (x)
+  8h79: font = 64h1F303E3333330000; // U+0079 (y)
+  8h7A: font = 64h003F260C193F0000; // U+007A (z)
+  8h7B: font = 64h00380C0C070C0C38; // U+007B ({)
+  8h7C: font = 64h0018181800181818; // U+007C (|)
+  8h7D: font = 64h00070C0C380C0C07; // U+007D (})
+  8h7E: font = 64h0000000000003B6E; // U+007E (~)
+}
+    color = font[(row << 3) + col];
+  }
+}
